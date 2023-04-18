@@ -1,4 +1,4 @@
-from Utils import bins, csv, firstN, oo, prune, value
+from Utils import bins, csv, firstN, oo, prune, value, dkap
 from Utils import kap
 import Utils 
 from Row import Row
@@ -181,13 +181,14 @@ class Data:
                     left['hi']=right['hi']
                     j+=1
                 t.append({'lo':left['lo'], 'hi':left['hi']})
-                j=j+1
+                j+=1
 
             return t if len(t0)==len(t) else merge(t) 
         def merges(attr,ranges):
-                print(map(pretty,merge(sorted(ranges,key=itemgetter('lo')))))
-                return list(map(pretty,merge(sorted(ranges,key=itemgetter('lo'))))),attr
-        return kap(rule,merges)
+            print("Ranges")
+            print(ranges)
+            return list(map(pretty,merge(sorted(ranges,key=itemgetter('lo'))))),attr
+        return dkap(rule,merges)
 
     
     def xpln(self,best,rest):
@@ -197,7 +198,7 @@ class Data:
         def score(ranges):
             rule = self.rule(ranges,maxSizes)
             if rule:
-                oo(self.showRule(rule))
+                print(self.showRule(rule))
                 bestr= self.selects(rule, best.rows)
                 restr= self.selects(rule, rest.rows)
                 if len(bestr) + len(restr) > 0: 
@@ -211,10 +212,36 @@ class Data:
         rule,most=firstN(sorted(tmp, key=itemgetter('val')),score)
         return rule,most
 
+    def selects(self, rule, rows):
+        def disjunction(ranges, row):
+            for range in ranges:
+                lo, hi, at = range['lo'], range['hi'], range['at']
+                x = row.cells[at]
+                if x == "?":
+                    return True
+                if lo == hi and lo == x:
+                    return True
+                if lo <= x and x < hi:
+                    return True
+            return False
 
-    
-    
+        def conjunction(row):
+            for ranges in rule.values():
+                if not disjunction(ranges, row):
+                    return False
+            return True
 
+        def function(r):
+            if conjunction(r):
+                return r
+        fun = lambda r: r if conjunction(r) else None
+
+        # return list(map(function, rows))
+        return list(map(fun, rows))
+    
+    def betters(self,n):
+        tmp=sorted(self.rows, key=lambda row: self.better(row, self.rows[self.rows.index(row)-1]))
+        return  n and tmp[0:n], tmp[n+1:]  or tmp
 
 
 

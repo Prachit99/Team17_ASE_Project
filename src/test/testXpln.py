@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(1, "../code")
+sys.path.insert(1, "../src")
 from Utils import o
 import Constants
 import Data

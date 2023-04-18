@@ -359,7 +359,12 @@ def prune(rule, maxSize):
     if n > 0:
         return rule
     
-
+def dkap(t, fun):
+    u = {}
+    for k,v in t.items():
+        v, k = fun(k,v) 
+        u[k or len(u)] = v
+    return u
 
 def firstN(sortedRanges,scoreFun):
     print("")
