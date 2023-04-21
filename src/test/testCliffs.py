@@ -1,4 +1,5 @@
-from Utils import rnd, rand, cliffsDelta
+from Utils import *
+from Stats import *
 import sys
 sys.path.insert(1, "../")
 

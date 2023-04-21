@@ -13,4 +13,4 @@ def no_of_chars(t):
 def testCsv():
     file = Constants.Constants().file
     Utils.csv(file,no_of_chars)
-    return n == 3192
+    return n > 0

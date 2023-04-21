@@ -1,8 +1,10 @@
 import math
-from Constants import Constants
+import Constants
+const = Constants.Constants() 
+from Utils import rint, rand
 
 class Num:
-    def __init__(self, at = 0, txt = ""):
+    def __init__(self, at = 0, txt = "", t=None):
         self.at = at
         self.txt = txt
         self.n = 0
@@ -12,19 +14,43 @@ class Num:
         self.hi = -math.inf
         self.w = -1 if txt.endswith("-") else 1
         self.has= {}
-
+        self.sd = 0
+        self.Max = 512
+        if t:
+            for n in t:
+                self.add(n)
 
     # Method to add 
+    # def add(self, n):
+    #     if n != "?":
+    #         self.n += 1
+    #         if self.n <= Constants().max:
+    #             self.has[n]= n
+    #         d = n - self.mu
+    #         self.mu = self.mu + d/self.n
+    #         self.m2 = self.m2 + d*(n - self.mu)
+    #         self.lo = min(n, self.lo)
+    #         self.hi = max(n, self.hi)
+    #         self.sd = 0 if self.n<2 else (self.m2/(self.n - 1))**.5
+
     def add(self, n):
-        if n != "?":
+        if n != '?':
             self.n += 1
-            if self.n <= Constants().max:
-                self.has[n]= n
+            self.lo, self.hi = min(n, self.lo), max(n, self.hi)
+
+            all = len(self.has)
+
+            pos = all + 1 if all < const.max else rint(1, all) if rand() < const.max / self.n else 0
+
+            if pos:
+                self.has[pos] = n
+                self.ok = False
+
             d = n - self.mu
             self.mu = self.mu + d/self.n
-            self.m2 = self.m2 + d*(n - self.mu)
-            self.lo = min(n, self.lo)
-            self.hi = max(n, self.hi)
+            self.m2 = self.m2 + d*(n-self.mu)
+            self.sd = 0 if self.n<2 else (self.m2/(self.n - 1))**.5
+
 
 
     # Method to return the mean of Num class
@@ -42,10 +68,16 @@ class Num:
         return x if x == "?" else round(x, n)
 
 
+    def vals(self):
+        return list(dict(sorted(self.has.items(), key=lambda x: x[1])).values())
+    
+
     # Method to calculate the normalized value of a Num
     def norm(self, n):
-        return n if n == "?" else (n - self.lo)/(self.hi - self.lo)
-
+        try:
+            return n if n == "?" else (n - self.lo)/(self.hi - self.lo)
+        except ZeroDivisionError:
+            return float('inf')
 
     # Method to calculate the distance between two Nums
     def dist(self, n1, n2):

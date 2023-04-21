@@ -1,247 +1,302 @@
-from Utils import bins, csv, firstN, oo, prune, value, dkap
-from Utils import kap
-import Utils 
 from Row import Row
 from Cols import Cols
-import math
-from Constants import Constants
+import Constants
+from Utils import *
 from operator import itemgetter
+from functools import cmp_to_key
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN, MiniBatchKMeans
+import random
+import numpy as np
 
 
+const = Constants.Constants()
+random.seed(const.seed)
 
 class Data:
-    def __init__(self,src):
-        self.rows = []
-        self.cols = None
-        fun=lambda x: self.add(x)
-        if type(src)==str:
-            csv(src,fun)
-        else:
-            for row in src:
-                self.add(row)
-
-                
-    def add(self,t):
-        if self.cols:
-            t = Row(t) if type(t) == list else t
-            self.rows.append(t)
-            self.cols.add(t)
-        else:
-            self.cols=Cols(t)
-
-
-    def stats(self,what,cols,nPlaces):
-        def fun(_, col):
-            if what == 'div':
-                val = col.div()
+    def __init__(self, src = None, Rows = None):
+        self.Rows = []
+        self.Cols = None
+        if src or Rows:
+            if isinstance(src, str):
+                csv(src, self.add)
             else:
-                val = col.mid()
-            return col.rnd(val, nPlaces), col.txt
-        return kap(cols or self.cols.y, fun)
+                self.Cols = Cols(src.Cols.names)
+                for Row in Rows:
+                    self.add(Row)
 
-
-    def clone(self,init={}):
-        data=Data([self.cols.names])
-        fun=lambda x: data.add(x)
-        x=list(map(fun, init))
-        return data
-
-    
-    def better(self,row1,row2):
-        s1=0
-        s2=0
-        ys=self.cols.y
-        for col in ys:
-            x=col.norm(row1.cells[col.at])
-            y=col.norm(row2.cells[col.at])
-            s1=s1-(pow(math.e,(col.w*(x-y))/len(ys)))
-            s2=s2-(pow(math.e,(col.w*(y-x))/len(ys)))
-        return s1/len(ys) < s2/len(ys)
-
-    
-    def dist(self,row1,row2,cols=None):
-        n=0
-        d=0
-        if cols:
-            li=cols
+    def add(self, t):
+        if self.Cols:
+            t = t if isinstance(t, Row) else Row(t)
+            self.Rows.append(t)
+            self.Cols.add(t)
         else:
-            li=self.cols.x
-        for col in li:
-            n+=1
-            d+=pow(col.dist(row1.cells[col.at],row2.cells[col.at]),Constants().p)
-        return pow((d/n),(1/Constants().p))
+            self.Cols=Cols(t)
     
-
-    def around(self,row1,rows=None,cols=None):
-        if rows!=None:
-            li=rows
-        else:
-            li=self.rows
-        around_li=[]
-        for r in li:
-            around_li.append((r, self.dist(row1, r, cols)))
-            around_li.sort(key = lambda x:x[1])
-        return around_li
-
+    def stats(self, Cols = None, nPlaces = 2, what = 'mid'):
+        stats_dict = dict(sorted({col.txt: rnd(getattr(col, what)(), nPlaces) for col in Cols or self.Cols.y}.items()))
+        stats_dict["N"] = len(self.Rows)
+        return stats_dict
     
-    def furthest(self,row1,rows=None,cols=None):
-        t=self.around(row1,rows,cols)
-        return t[len(t)-1]
+    def dist(self, Row1, Row2, Cols = None):
+        n,d = 0,0
+        for col in Cols or self.Cols.x:
+            n = n + 1
+            d = d + col.dist(Row1.cells[col.at], Row2.cells[col.at])**const.p
+        return (d/n)**(1/const.p)
 
-    
-    def half(self,rows=None,cols=None,above=None):
-        def dist(row1,row2):
-            return self.dist(row1,row2,cols)
-        
-        rows=rows if rows!=None else self.rows
-        some=Utils.many(rows,Constants().sample)
-        A=above if above != None else Utils.any(some)
-        # print(self.furthest(A,rows))
-        B=self.furthest(A,rows)[0]
-        c=dist(A,B)
+    def clone(data, ts={}):
+        Data1 = Data()
+        Data1.add(data.Cols.names)
+        for _, t in enumerate(ts or {}):
+            Data1.add(t)
+        return Data1
+
+    def half(self, Rows = None, Cols = None, above = None):
+        def gap(Row1,Row2): 
+            return self.dist(Row1,Row2,Cols)
+        def project(Row):
+            return {'Row' : Row, 'dist' : cosine(gap(Row,A), gap(Row,B), c)}
+        Rows = Rows or self.Rows
+        some = many(Rows,const.halves)
+        A    = above if above and const.reuse else any(some)
+        tmp = sorted([{'Row': r, 'dist': gap(r, A)} for r in some], key=lambda x: x['dist'])
+        far = tmp[int((len(tmp) - 1) * const.far)]
+        B    = far['Row']
+        c    = far['dist']
         left, right = [], []
-
-        def project(row):
-            x, y = Utils.cosine(dist(row,A), dist(row,B), c)
-            try:
-                row.x = row.x
-                row.y = row.y
-            except:
-                row.x = x
-                row.y = y
-            return {'row' : row, 'x' : x, 'y' : y}
-        for n,tmp in enumerate(sorted(list(map(project, rows)), key=itemgetter('x'))):
-            if n < len(rows)//2:
-                left.append(tmp['row'])
-                mid = tmp['row']
+        for n,tmp in enumerate(sorted(map(project, Rows), key=lambda x: x['dist'])):
+            if (n + 1) <= (len(Rows) / 2):
+                left.append(tmp["Row"])
             else:
-                right.append(tmp['row'])
-        return left, right, A, B, mid, c
+                right.append(tmp["Row"])
+        evals = 1 if const.reuse and above else 2
+        return left, right, A, B, c, evals
     
-
-    def cluster(self,rows=None,cols=None,above=None):
-        rows=rows if rows!=None else self.rows
-        # minn=minn if minn!=None else pow(len(rows),Constants().min)
-        cols=cols if cols!=None else self.cols.x
-        node={"data":self.clone(rows)}
-        if len(rows)>=2:
-            left,right,node["A"],node["B"],node["mid"],node["c"]=self.half(rows,cols,above)
-            node["left"]=self.cluster(left,cols,node["A"])
-            node["right"]=self.cluster(right,cols,node["B"])
-        return node
+    def better(self, Rows1, Rows2, s1=0, s2=0, ys=None, x=0, y=0):
+        if isinstance(Rows1, Row):
+            Rows1 = [Rows1]
+            Rows2 = [Rows2]
+        if not ys:
+            ys = self.Cols.y
+        for col in ys:
+            for Row1, Row2 in zip(Rows1, Rows2):
+                x = col.norm(Row1.cells[col.at])
+                y = col.norm(Row2.cells[col.at])
+                s1 = s1 - math.exp(col.w * (x - y) / len(ys))
+                s2 = s2 - math.exp(col.w * (y - x) / len(ys))
+        return s1 / len(ys) < s2 / len(ys)
     
-
-    def sway(self,rows=None,minn=None,cols=None,above=None):
-        data = self
-        def worker(rows, worse,evals0=None, above = None):
-            if len(rows) <= len(data.rows)**Constants().min: 
-                return rows, Utils.many(worse, Constants().rest * len(rows)),evals0
-            else:
-                l,r,A,B,c,evals = self.half(rows, None, above)
-                if self.better(B,A):
-                    l,r,A,B = r,l,B,A
-                for row in r:
-                    worse.append(row)
-                return worker(l,worse,evals+evals0,A)
-        best,rest,evals = worker(data.rows,[],0)
-        return self.clone(best), self.clone(rest),evals
-    
-    def tree(self, rows = None , min = None, cols = None, above = None):
-        rows = rows if rows != None else self.rows
-        min = min if min != None else len(rows)**Constants().min
-        cols = cols if cols != None else self.cols.x
+    def bdom(self, Rows1, Rows2, ys=None):
+        if isinstance(Rows1, Row):
+            Rows1 = [Rows1]
+            Rows2 = [Rows2]
+        if not ys:
+            ys = self.Cols.y
         
-        node = { 'data' : self.clone(rows) }
-        if len(rows) >= 2*min:
-            left, right, node['A'], node['B'], node['mid'], _ = self.half(rows,cols,above)
-            node['left']  = self.tree(left,  min, cols, node['A'])
-            node['right'] = self.tree(right, min, cols, node['B'])
+        dominates = False
+        for col in ys:
+            for Row1, Row2 in zip(Rows1, Rows2):
+                x = col.norm(Row1.cells[col.at]) * col.w * -1
+                y = col.norm(Row2.cells[col.at]) * col.w * -1
+                if x > y:
+                    return False
+                elif x < y:
+                    dominates = True
+        return dominates
+
+    def better_bdom(self, Row1, Row2, ys=None):
+        Row1_bdom = self.bdom(Row1, Row2, ys=ys)
+        Row2_bdom = self.bdom(Row2, Row1, ys=ys)
+        if Row1_bdom and not Row2_bdom:
+            return True
+        else:
+            return False
+        
+    def better_hypervolume(self, Row1, Row2):
+        s1, s2, ys = 0, 0, self.Cols.y
+        Data = [[], []]
+        ref_point = []
+        for col in ys:
+            x = col.norm(Row1.cells[col.at])
+            y = col.norm(Row2.cells[col.at])
+            if '-' in col.txt:
+                x = -x
+                y = -y
+                ref_point.append(1)
+            else:
+                ref_point.append(2)
+            Data[0].append(x)
+            Data[1].append(y)
+        if len(ref_point) < 2:
+            return Data[0] > Data[1]
+        # print(Data)
+        # print(ref_point)
+
+        hv = hypervolume(Data)
+        output = hv.contributions(ref_point)
+        hv1, hv2 = output[0], output[1]
+
+        return hv1 < hv2
+    
+    def tree(self, Rows = None , min = None, Cols = None, above = None):
+        Rows = Rows or self.Rows
+        min  = min or len(Rows)**const.min
+        Cols = Cols or self.Cols.x
+        node = { 'Data' : self.clone(Rows) }
+        if len(Rows) >= 2*min:
+            left, right, node['A'], node['B'], _, _ = self.half(Rows,Cols,above)
+            node['left']  = self.tree(left,  min, Cols, node['A'])
+            node['right'] = self.tree(right, min, Cols, node['B'])
         return node
     
-    def rule(self,ranges,maxSize):
-        t={}
-        for range in ranges:
-            t[range['txt']] = t.get(range['txt']) if t.get(range['txt']) else []
-            t[range['txt']].append({'lo' : range['lo'],'hi' : range['hi'],'at':range['at']})
-        return prune(t, maxSize)
-    
-    def showRule(self,rule):
-        def pretty(range):
-            return range['lo'] if range['lo']==range['hi'] else [range['lo'], range['hi']]
-    
-        def merge(t0):
-            t,j =[],1
-            while j<=len(t0):
-                left = t0[j-1]
-                if j < len(t0):
-                    right = t0[j]
-                else:
-                    right = None
-                if right and left['hi']==right['lo']:
-                    left['hi']=right['hi']
-                    j+=1
-                t.append({'lo':left['lo'], 'hi':left['hi']})
-                j+=1
+    def sway(self, algo = 'half', better = 'zitler'):
+        data = self
+        def worker(Rows, worse, evals0 = None, above = None):
+            if len(Rows) <= len(data.Rows)**const.min: 
+                return Rows, many(worse, const.rest*len(Rows)), evals0
+            else:
+                if algo == 'half':
+                    l,r,A,B,c,evals = self.half(Rows, None, above)
+                elif algo == 'kmeans':
+                    l,r,A,B,evals = self.kmeans(Rows)
+                elif algo == 'agglomerative_clustering':
+                    l,r,A,B,evals = self.agglomerative_clustering(Rows)
+                elif algo == 'dbscan':
+                    l,r,A,B,evals = self.dbscan(Rows)
+                elif algo == 'pca':
+                    l,r,A,B,evals = self.pca(Rows)
+                
+                if better == 'zitler':
+                    if self.better(B,A):
+                        l,r,A,B = r,l,B,A
+                elif better == 'bdom':
+                    if self.better_bdom(B,A):
+                        l,r,A,B = r,l,B,A
 
-            return t if len(t0)==len(t) else merge(t) 
-        def merges(attr,ranges):
-            print("Ranges")
-            print(ranges)
-            return list(map(pretty,merge(sorted(ranges,key=itemgetter('lo'))))),attr
-        return dkap(rule,merges)
-
-    
-    def xpln(self,best,rest):
-        tmp,maxSizes = [],{}
-        def v(has):
-            return value(has, len(best.rows), len(rest.rows), "best")
-        def score(ranges):
-            rule = self.rule(ranges,maxSizes)
-            if rule:
-                print(self.showRule(rule))
-                bestr= self.selects(rule, best.rows)
-                restr= self.selects(rule, rest.rows)
-                if len(bestr) + len(restr) > 0: 
-                    return v({'best': len(bestr), 'rest':len(restr)}),rule
-        for ranges in bins(self.cols.x,{'best':best.rows, 'rest':rest.rows}):
-            maxSizes[ranges[1]['txt']] = len(ranges)
-            print("")
-            for range in ranges:
-                print(range['txt'], range['lo'], range['hi'])
-                tmp.append({'range':range, 'max':len(ranges),'val': v(range['y'].has)})
-        rule,most=firstN(sorted(tmp, key=itemgetter('val')),score)
-        return rule,most
-
-    def selects(self, rule, rows):
-        def disjunction(ranges, row):
-            for range in ranges:
-                lo, hi, at = range['lo'], range['hi'], range['at']
-                x = row.cells[at]
-                if x == "?":
-                    return True
-                if lo == hi and lo == x:
-                    return True
-                if lo <= x and x < hi:
-                    return True
-            return False
-
-        def conjunction(row):
-            for ranges in rule.values():
-                if not disjunction(ranges, row):
-                    return False
-            return True
-
-        def function(r):
-            if conjunction(r):
-                return r
-        fun = lambda r: r if conjunction(r) else None
-
-        # return list(map(function, rows))
-        return list(map(fun, rows))
+                for Row in r:
+                    worse.append(Row)
+                return worker(l,worse,evals+evals0,A)
+        best,rest,evals = worker(data.Rows,[],0)
+        return Data.clone(self, best), Data.clone(self, rest), evals
     
     def betters(self,n):
-        tmp=sorted(self.rows, key=lambda row: self.better(row, self.rows[self.rows.index(row)-1]))
-        return  n and tmp[0:n], tmp[n+1:]  or tmp
+        key = cmp_to_key(lambda Row1, Row2: -1 if self.better(Row1, Row2) else 1)
+        tmp = sorted(self.Rows, key = key)
+        if n is None:
+            return tmp
+        else:
+            return tmp[1:n], tmp[n+1:]
+    
+    def kmeans1(self, Rows=None):
+        left = []
+        right = []
+        A = None
+        B = None
+        
+        def min_dist(center, Row, A):
+            if not A:
+                A = Row
+            if self.dist(A, center) > self.dist(A, Row):
+                return Row
+            else:
+                return A
+    
+        if not Rows:
+            Rows = self.Rows
+        Row_set = np.array([r.cells for r in Rows])
+        kmeans = KMeans(n_clusters=2, random_state=const.seed, n_init=10)
+        kmeans.fit(Row_set)
+        left_cluster = Row(kmeans.cluster_centers_[0])
+        right_cluster = Row(kmeans.cluster_centers_[1])
 
+        for key, value in enumerate(kmeans.labels_):
+            if value == 0:
+                A = min_dist(left_cluster, Rows[key], A)
+                left.append(Rows[key])
+            else:
+                B = min_dist(right_cluster, Rows[key], B)
+                right.append(Rows[key])
 
+        return left, right, A, B, 1
+    
+    def kmeans(self, Rows=None):
+        left = []
+        right = []
+        A = None
+        B = None
+        
+        def min_dist(center, Row, A):
+            if not A:
+                A = Row
+            if self.dist(A, center) > self.dist(A, Row):
+                return Row
+            else:
+                return A
+    
+        if not Rows:
+            Rows = self.Rows
+        Row_set = np.array([r.cells for r in Rows])
+        kmeans = MiniBatchKMeans(n_clusters=2, random_state=0, batch_size=250, n_init="auto")
+        kmeans.fit(Row_set)
+        left_cluster = Row(kmeans.cluster_centers_[0])
+        right_cluster = Row(kmeans.cluster_centers_[1])
 
+        for key, value in enumerate(kmeans.labels_):
+            if value == 0:
+                A = min_dist(left_cluster, Rows[key], A)
+                left.append(Rows[key])
+            else:
+                B = min_dist(right_cluster, Rows[key], B)
+                right.append(Rows[key])
+
+        return left, right, A, B, 1
+    
+
+    def agglomerative_clustering(self, Rows=None):
+        left = []
+        right = []
+
+        if not Rows:
+            Rows = self.Rows
+        Row_set = np.array([r.cells for r in Rows])
+        agg_clust = AgglomerativeClustering(n_clusters=2, metric='euclidean', linkage='ward')
+        agg_clust.fit(Row_set)
+
+        for key, value in enumerate(agg_clust.labels_):
+            if value == 0:
+                left.append(Rows[key])
+            else:
+                right.append(Rows[key])
+        return left, right, random.choices(left, k=10), random.choices(right, k=10), 1
+    
+    def dbscan(self, Rows=None):
+        left = []
+        right = []
+
+        if not Rows:
+            Rows = self.Rows
+        Row_set = np.array([r.cells for r in Rows])
+        db = DBSCAN(eps = 3, min_samples = 2)
+        db.fit(Row_set)
+
+        for key, value in enumerate(db.labels_):
+            if value == 0:
+                left.append(Rows[key])
+            else:
+                right.append(Rows[key])
+        return left, right, random.choices(left, k=10), random.choices(right, k=10), db.n_features_in_
+    
+    def pca(self, Rows=None, Cols=None, above=None):
+        if not Rows:
+            Rows = self.Rows
+        Row_set = np.array([r.cells for r in Rows])
+        pca = PCA(n_components=1)
+        pcs = pca.fit_transform(Row_set)
+        result = []
+        for i in sorted(enumerate(Rows), key=lambda x: pcs[x[0]]):
+            result.append(i[1])
+        n = len(result)
+        left = result[:n//2]
+        right = result[n//2:]
+        return left, right, random.choices(left, k=10), random.choices(right, k=10), 1
