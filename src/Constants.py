@@ -26,7 +26,7 @@ class Constants:
         self.significance_level = 5
         self.d = 0.35
         self.reuse = True
-        self.file = "../../etc/data/auto93.csv"
+        self.file = "../../etc/data/SSN.csv"
         self.help = '''
             script.lua : an example script with help text and a test suite
             (c)2022, Tim Menzies <timm@ieee.org>, BSD-2 

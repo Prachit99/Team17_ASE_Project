@@ -126,6 +126,7 @@ def main(options,help,funs):
         top_table['top'] = top_table.pop('top')
 
         for k,v in top_table.items():
+            # print(v['data'],"Main 129")
             v['avg'] = stats_average(v['data'])
             stats = [k] + [v['avg'][y] for y in headers]
             stats += [int(v['evals']/const.iter)]

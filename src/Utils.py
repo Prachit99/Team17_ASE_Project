@@ -423,6 +423,7 @@ def impute_missing_values(df):
 def stats_average(data_array):
     res = {}
     for x in data_array:
+        print(x.Cols)
         for k,v in x.stats().items():
             res[k] = res.get(k,0) + v
     for k,v in res.items():

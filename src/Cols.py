@@ -11,7 +11,7 @@ class Cols:
         self.y=[]
         self.klass=None
         for n,s in enumerate(t):
-            s=str(s)
+            s=str(s).strip()
             col = Num(n,s) if re.findall("^[A-Z]+",s) else Sym(n,s)
             self.all.append(col)
             if not re.findall("X$",s):

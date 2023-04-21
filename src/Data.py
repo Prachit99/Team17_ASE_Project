@@ -81,6 +81,7 @@ class Data:
             ys = self.Cols.y
         for col in ys:
             for Row1, Row2 in zip(Rows1, Rows2):
+                # print(col.at,col.txt,"Data Line 84")
                 x = col.norm(Row1.cells[col.at])
                 y = col.norm(Row2.cells[col.at])
                 s1 = s1 - math.exp(col.w * (x - y) / len(ys))
@@ -237,7 +238,8 @@ class Data:
         if not Rows:
             Rows = self.Rows
         Row_set = np.array([r.cells for r in Rows])
-        kmeans = MiniBatchKMeans(n_clusters=2, random_state=0, batch_size=250, n_init="auto")
+        kmeans = MiniBatchKMeans(n_clusters=2, random_state=0, batch_size=250, n_init=10)
+        # print(Row_set,"data Line 241")
         kmeans.fit(Row_set)
         left_cluster = Row(kmeans.cluster_centers_[0])
         right_cluster = Row(kmeans.cluster_centers_[1])
