@@ -26,7 +26,7 @@ class Constants:
         self.significance_level = 5
         self.d = 0.35
         self.reuse = True
-        self.file = "../../etc/data/auto93.csv"
+        self.file = "../../etc/data/auto93_preprocessed.csv"
         self.help = '''
             script.lua : an example script with help text and a test suite
             (c)2022, Tim Menzies <timm@ieee.org>, BSD-2 
@@ -42,14 +42,12 @@ class Constants:
              'sway1': {'data' : [], 'evals' : 0},
              'sway2': {'data' : [], 'evals' : 0},
              'xpln1': {'data' : [], 'evals' : 0},
-             'xpln2': {'data' : [], 'evals' : 0},
              'top': {'data' : [], 'evals' : 0}}
 
         self.bottom_table = [[['all', 'all'],None],
                 [['all', 'sway1'],None],
                 [['sway1', 'sway2'],None],
                 [['sway1', 'xpln1'],None],
-                [['sway2', 'xpln2'],None],
                 [['sway1', 'top'],None]]
          
         self.hp_grid = {

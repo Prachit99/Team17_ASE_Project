@@ -353,6 +353,25 @@ def dkap(t, fun):
     return u
 
 
+def showRule(self, rule):
+    def pretty(range):
+        return range['lo'] if range['lo'] == range['hi'] else [range['lo'], range['hi']]
+    def merges(attr, ranges):
+        return list(map(pretty, merge(sorted(ranges, key=lambda x: x['lo'])))), attr
+    def merge(t0):
+        t = []
+        j = 0
+        while j < len(t0):
+            left = t0[j]
+            right = None if j+1 >= len(t0) else t0[j+1]
+            if right and left['hi'] == right['lo']:
+                left['hi'] = right['hi']
+                j = j +  1
+            t.append({'lo': left['lo'], 'hi': left['hi']})
+            j = j +  1
+        return t if len(t0) == len(t) else merge(t)
+    return kap(rule, merges)
+
 def firstN(sortedRanges,scoreFun):
     print("")
     def function(r):
@@ -387,37 +406,37 @@ def better_dicts(dict1, dict2, data):
     return s1 / len(ys) < s2 / len(ys)
 
 
-def selects(self, rule, rows):
-        def disjunction(ranges, row):
-            for range in ranges:
-                lo, hi, at = range['lo'], range['hi'], range['at']
-                x = row.cells[at]
-                if x == "?":
-                    return True
-                if lo == hi and lo == x:
-                    return True
-                if lo <= x and x < hi:
-                    return True
-            return False
-        def conjunction(row):
-            for ranges in rule.values():
-                if not disjunction(ranges, row):
-                    return False
-            return True
-        def function(r):
-            if conjunction(r):
-                return r
-        return list(map(function, rows))
+# def selects(self, rule, rows):
+        # def disjunction(ranges, row):
+        #     for range in ranges:
+        #         lo, hi, at = range['lo'], range['hi'], range['at']
+        #         x = row.cells[at]
+        #         if x == "?":
+        #             return True
+        #         if lo == hi and lo == x:
+        #             return True
+        #         if lo <= x and x < hi:
+        #             return True
+        #     return False
+        # def conjunction(row):
+        #     for ranges in rule.values():
+        #         if not disjunction(ranges, row):
+        #             return False
+        #     return True
+        # def function(r):
+        #     if conjunction(r):
+        #         return r
+        # return list(map(function, rows))
 
 
-def impute_missing_values(df):
-    for i in df.columns[df.isnull().any(axis=0)]:
-        df[i].fillna(df[i].mean(),inplace=True)
-    for col in df.columns[df.eq('?').any()]:
-        df[col] =df[col].replace('?', np.nan)
-        df[col] = df[col].astype(float)
-        df[col] = df[col].fillna(df[col].mean())
-    return df
+# def impute_missing_values(df):
+#     for i in df.columns[df.isnull().any(axis=0)]:
+#         df[i].fillna(df[i].mean(),inplace=True)
+#     for col in df.columns[df.eq('?').any()]:
+#         df[col] =df[col].replace('?', np.nan)
+#         df[col] = df[col].astype(float)
+#         df[col] = df[col].fillna(df[col].mean())
+#     return df
 
 
 def stats_average(data_array):
@@ -430,22 +449,50 @@ def stats_average(data_array):
     return res
 
 
-def label_encoding(df):
-    syms = [col for col in df.columns if col.strip()[0].islower() and df[col].dtypes == 'O']
-    le = LabelEncoder()
-    for sym in syms:
-        col = le.fit_transform(df[sym])
-        df[sym] = col.copy()
+# def label_encoding(df):
+#     syms = [col for col in df.columns if col.strip()[0].islower() and df[col].dtypes == 'O']
+#     le = LabelEncoder()
+#     for sym in syms:
+#         col = le.fit_transform(df[sym])
+#         df[sym] = col.copy()
 
 
-def preprocess_data(file, Data):
-    df = pd.read_csv(file)
-    df = impute_missing_values(df)
-    label_encoding(df)
-    file = file.replace('.csv', '_preprocessed.csv')
-    df.to_csv(file, index=False)
-    return Data(file)
+# def preprocess_data(file, Data):
+#     df = pd.read_csv(file)
+#     df = impute_missing_values(df)
+#     label_encoding(df)
+#     file = file.replace('.csv', '_preprocessed.csv')
+#     df.to_csv(file, index=False)
+#     return Data(file)
 
+def showRule(rule):
+    def pretty(range):
+        return range['lo'] if range['lo'] == range['hi'] else [range['lo'], range['hi']]
+    def merges(attr, ranges):
+        return list(map(pretty, merge(sorted(ranges, key=lambda x: x['lo'])))), attr
+    def merge(t0):
+        t = []
+        j = 0
+        while j < len(t0):
+            left = t0[j]
+            right = None if j+1 >= len(t0) else t0[j+1]
+            if right and left['hi'] == right['lo']:
+                left['hi'] = right['hi']
+                j = j +  1
+            t.append({'lo': left['lo'], 'hi': left['hi']})
+            j = j +  1
+        return t if len(t0) == len(t) else merge(t)
+    return kap(rule, merges)
+
+def prune(rule, maxSize):
+    n=0
+    for txt,ranges in rule.items():
+        n += 1
+        if len(ranges) == maxSize[txt]:
+            n-=1
+            rule[txt] = None
+    if n > 0:
+        return rule
 
 def hpo_minimal_sampling_params(DATA, XPLN, selects, showRule):
     most_optimial_sway_hps = []
@@ -533,139 +580,139 @@ def hpo_hyperopt_params(DATA, XPLN, selects, showRule):
     print("sort with",len(best_trial['result']['data'].rows),"evals",best_trial['result']['top'].stats(best_trial['result']['top'].cols.y, 2, 'mid'))
     print()
 
-def run_stats(data, top_table):
-    print('MWU and KW significance level: ', const.significance_level/100)
-    sway1 = top_table['sway1']
-    sway2 = top_table['sway2 (kmeans)']
-    # sway3 = top_table['sway3 (agglo)']
-    # sway4 = top_table['sway4 (kmeans)']
-    sways = ['sway1', 'sway2']
-    mwu_sways = []
-    kw_sways = []
+# def run_stats(data, top_table):
+#     print('MWU and KW significance level: ', const.significance_level/100)
+#     sway1 = top_table['sway1']
+#     sway2 = top_table['sway2 (kmeans)']
+#     # sway3 = top_table['sway3 (agglo)']
+#     # sway4 = top_table['sway4 (kmeans)']
+#     sways = ['sway1', 'sway2']
+#     mwu_sways = []
+#     kw_sways = []
 
-    for col in data.Cols.y:
-        sway_avgs = [sway1['avg'][col.txt], sway2['avg'][col.txt]]
+#     for col in data.Cols.y:
+#         sway_avgs = [sway1['avg'][col.txt], sway2['avg'][col.txt]]
 
-        if col.w == -1:
-            best_avg = min(sway_avgs)
-        else:
-            best_avg = max(sway_avgs)
-        best_sway = sways[sway_avgs.index(best_avg)]
+#         if col.w == -1:
+#             best_avg = min(sway_avgs)
+#         else:
+#             best_avg = max(sway_avgs)
+#         best_sway = sways[sway_avgs.index(best_avg)]
 
-        for best in sway1['data']:
-            sway1_col = [row.cells[col.at] for row in best.Rows]
-        for best in sway2['data']:
-            sway2_col = [row.cells[col.at] for row in best.Rows]
-        # for best in sway3['data']:
-        #     sway3_col = [row.cells[col.at] for row in best.Rows]
-        # for best in sway4['data']:
-        #     sway4_col = [row.cells[col.at] for row in best.Rows]
+#         for best in sway1['data']:
+#             sway1_col = [row.cells[col.at] for row in best.Rows]
+#         for best in sway2['data']:
+#             sway2_col = [row.cells[col.at] for row in best.Rows]
+#         # for best in sway3['data']:
+#         #     sway3_col = [row.cells[col.at] for row in best.Rows]
+#         # for best in sway4['data']:
+#         #     sway4_col = [row.cells[col.at] for row in best.Rows]
 
-        # _, p_value = kruskal(sway1_col, sway2_col, sway3_col, sway4_col)
-        # if p_value < the['kw_significance']:
-        #     top_table['kw_significant'].append('yes')
-        # else:
-        #     top_table['kw_significant'].append('no')
+#         # _, p_value = kruskal(sway1_col, sway2_col, sway3_col, sway4_col)
+#         # if p_value < the['kw_significance']:
+#         #     top_table['kw_significant'].append('yes')
+#         # else:
+#         #     top_table['kw_significant'].append('no')
         
-        groups = [sway1_col, sway2_col]
-        num_groups = len(groups)
-        p_values_mwu = np.zeros((num_groups, num_groups))
-        p_values_kruskal = np.zeros((num_groups, num_groups))
+#         groups = [sway1_col, sway2_col]
+#         num_groups = len(groups)
+#         p_values_mwu = np.zeros((num_groups, num_groups))
+#         p_values_kruskal = np.zeros((num_groups, num_groups))
 
-        for i in range(num_groups):
-            for j in range(i+1, num_groups):
-                _, p = mannwhitneyu(groups[i], groups[j], alternative='two-sided')
-                p_values_mwu[i, j] = p
-                p_values_mwu[j, i] = p
-                _, p_value_kruskal = kruskal(sway1_col, sway2_col)
-                p_values_kruskal[i, j] = p_value_kruskal
-                p_values_kruskal[j, i] = p_value_kruskal
+#         for i in range(num_groups):
+#             for j in range(i+1, num_groups):
+#                 _, p = mannwhitneyu(groups[i], groups[j], alternative='two-sided')
+#                 p_values_mwu[i, j] = p
+#                 p_values_mwu[j, i] = p
+#                 _, p_value_kruskal = kruskal(sway1_col, sway2_col)
+#                 p_values_kruskal[i, j] = p_value_kruskal
+#                 p_values_kruskal[j, i] = p_value_kruskal
 
-        # print('Pairwise Mann-Whitney U tests')
-        # print(pd.DataFrame(p_values_mwu, index=sways, columns=sways))
-        # print()
+#         # print('Pairwise Mann-Whitney U tests')
+#         # print(pd.DataFrame(p_values_mwu, index=sways, columns=sways))
+#         # print()
 
-        # Apply Bonferroni correction for multiple comparisons
-        adjusted_p_values = multipletests(p_values_mwu.ravel(), method='fdr_bh')[1].reshape(p_values_mwu.shape)
-        post_hoc = pd.DataFrame(adjusted_p_values, index=sways, columns=sways)
+#         # Apply Bonferroni correction for multiple comparisons
+#         adjusted_p_values = multipletests(p_values_mwu.ravel(), method='fdr_bh')[1].reshape(p_values_mwu.shape)
+#         post_hoc = pd.DataFrame(adjusted_p_values, index=sways, columns=sways)
 
-        # print("Pairwise Mann-Whitney U tests with Benjamini/Hochberg correction:")
-        # print(post_hoc)
-        # print()
+#         # print("Pairwise Mann-Whitney U tests with Benjamini/Hochberg correction:")
+#         # print(post_hoc)
+#         # print()
 
-        krusal_df = pd.DataFrame(p_values_kruskal, index=sways, columns=sways)
-        # print("Pairwise Kruskal Wallis:")
-        # print(krusal_df)
-        # print()
+#         krusal_df = pd.DataFrame(p_values_kruskal, index=sways, columns=sways)
+#         # print("Pairwise Kruskal Wallis:")
+#         # print(krusal_df)
+#         # print()
 
-        mwu_sig = set(post_hoc.iloc[list(np.where(post_hoc >= const.significance_level)[0])].index)
-        if len(mwu_sig) == 0:
-            mwu_sways.append([best_sway])
-        else:
-            mwu_sways.append(list(mwu_sig))
+#         mwu_sig = set(post_hoc.iloc[list(np.where(post_hoc >= const.significance_level)[0])].index)
+#         if len(mwu_sig) == 0:
+#             mwu_sways.append([best_sway])
+#         else:
+#             mwu_sways.append(list(mwu_sig))
 
-        kw_sig = set(krusal_df.iloc[list(np.where(krusal_df >= const.significance_level)[0])].index)
-        if len(kw_sig) == 0:
-            kw_sways.append([best_sway])
-        else:
-            kw_sways.append(list(kw_sig))
+#         kw_sig = set(krusal_df.iloc[list(np.where(krusal_df >= const.significance_level)[0])].index)
+#         if len(kw_sig) == 0:
+#             kw_sways.append([best_sway])
+#         else:
+#             kw_sways.append(list(kw_sig))
 
     
-    xpln1 = top_table['xpln1']
-    xpln2 = top_table['xpln2 (kmeans+kdtree)']
-    # xpln3 = top_table['xpln3 (agglo+kdtree)']
-    # xpln4 = top_table['xpln4 (pca+kdtree)']
-    xplns = ['xpln1', 'xpln2']
-    mwu_xplns = []
-    kw_xplns = []
+#     xpln1 = top_table['xpln1']
+#     xpln2 = top_table['xpln2 (kmeans+kdtree)']
+#     # xpln3 = top_table['xpln3 (agglo+kdtree)']
+#     # xpln4 = top_table['xpln4 (pca+kdtree)']
+#     xplns = ['xpln1', 'xpln2']
+#     mwu_xplns = []
+#     kw_xplns = []
 
-    for col in data.Cols.y:
-        xpln_avgs = [xpln1['avg'][col.txt], xpln2['avg'][col.txt]]
+#     for col in data.Cols.y:
+#         xpln_avgs = [xpln1['avg'][col.txt], xpln2['avg'][col.txt]]
 
-        if col.w == -1:
-            best_avg = min(xpln_avgs)
-        else:
-            best_avg = max(xpln_avgs)
-        best_xpln = xplns[xpln_avgs.index(best_avg)]
+#         if col.w == -1:
+#             best_avg = min(xpln_avgs)
+#         else:
+#             best_avg = max(xpln_avgs)
+#         best_xpln = xplns[xpln_avgs.index(best_avg)]
 
-        for best in xpln1['data']:
-            xpln1_col = [row.cells[col.at] for row in best.Rows]
-        for best in xpln2['data']:
-            xpln2_col = [row.cells[col.at] for row in best.Rows]
-        # for best in xpln3['data']:
-        #     xpln3_col = [row.cells[col.at] for row in best.Rows]
-        # for best in xpln4['data']:
-        #     xpln4_col = [row.cells[col.at] for row in best.Rows]
+#         for best in xpln1['data']:
+#             xpln1_col = [row.cells[col.at] for row in best.Rows]
+#         for best in xpln2['data']:
+#             xpln2_col = [row.cells[col.at] for row in best.Rows]
+#         # for best in xpln3['data']:
+#         #     xpln3_col = [row.cells[col.at] for row in best.Rows]
+#         # for best in xpln4['data']:
+#         #     xpln4_col = [row.cells[col.at] for row in best.Rows]
         
-        groups = [xpln1_col, xpln2_col]
-        num_groups = len(groups)
-        p_values_mwu = np.zeros((num_groups, num_groups))
-        p_values_kruskal = np.zeros((num_groups, num_groups))
+#         groups = [xpln1_col, xpln2_col]
+#         num_groups = len(groups)
+#         p_values_mwu = np.zeros((num_groups, num_groups))
+#         p_values_kruskal = np.zeros((num_groups, num_groups))
 
-        for i in range(num_groups):
-            for j in range(i+1, num_groups):
-                _, p = mannwhitneyu(groups[i], groups[j], alternative='two-sided')
-                p_values_mwu[i, j] = p
-                p_values_mwu[j, i] = p
-                _, p_value_kruskal = kruskal(xpln1_col, xpln2_col)
-                p_values_kruskal[i, j] = p_value_kruskal
-                p_values_kruskal[j, i] = p_value_kruskal
+#         for i in range(num_groups):
+#             for j in range(i+1, num_groups):
+#                 _, p = mannwhitneyu(groups[i], groups[j], alternative='two-sided')
+#                 p_values_mwu[i, j] = p
+#                 p_values_mwu[j, i] = p
+#                 _, p_value_kruskal = kruskal(xpln1_col, xpln2_col)
+#                 p_values_kruskal[i, j] = p_value_kruskal
+#                 p_values_kruskal[j, i] = p_value_kruskal
 
-        adjusted_p_values = multipletests(p_values_mwu.ravel(), method='fdr_bh')[1].reshape(p_values_mwu.shape)
-        post_hoc = pd.DataFrame(adjusted_p_values, index=xplns, columns=xplns)
-        krusal_df = pd.DataFrame(p_values_kruskal, index=xplns, columns=xplns)
+#         adjusted_p_values = multipletests(p_values_mwu.ravel(), method='fdr_bh')[1].reshape(p_values_mwu.shape)
+#         post_hoc = pd.DataFrame(adjusted_p_values, index=xplns, columns=xplns)
+#         krusal_df = pd.DataFrame(p_values_kruskal, index=xplns, columns=xplns)
 
-        mwu_sig = set(post_hoc.iloc[list(np.where(post_hoc >= const.significance_level)[0])].index)
-        if len(mwu_sig) == 0:
-            mwu_xplns.append([best_xpln])
-        else:
-            mwu_xplns.append(list(mwu_sig))
+#         mwu_sig = set(post_hoc.iloc[list(np.where(post_hoc >= const.significance_level)[0])].index)
+#         if len(mwu_sig) == 0:
+#             mwu_xplns.append([best_xpln])
+#         else:
+#             mwu_xplns.append(list(mwu_sig))
 
-        kw_sig = set(krusal_df.iloc[list(np.where(krusal_df >= const.significance_level)[0])].index)
-        if len(kw_sig) == 0:
-            kw_xplns.append([best_xpln])
-        else:
-            kw_xplns.append(list(kw_sig))
+#         kw_sig = set(krusal_df.iloc[list(np.where(krusal_df >= const.significance_level)[0])].index)
+#         if len(kw_sig) == 0:
+#             kw_xplns.append([best_xpln])
+#         else:
+#             kw_xplns.append(list(kw_sig))
 
-    return mwu_sways, kw_sways, mwu_xplns, kw_xplns
+#     return mwu_sways, kw_sways, mwu_xplns, kw_xplns
 

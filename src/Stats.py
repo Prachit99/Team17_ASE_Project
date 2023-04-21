@@ -9,33 +9,23 @@ def samples(t,n=0):
         u.append(t[random.randrange(len(t))]) 
     return u
 
-def gaussian(mu,sd):
-    mu,sd = mu or 0, sd or 1
-    sq,pi,log,cos,r = math.sqrt,math.pi,math.log,math.cos,random.random
-    return  mu + sd * sq(-2*log(r())) * cos(2*pi*r())
+def gaussian(mu = 0, sd = 1):
+    return mu + sd * math.sqrt(-2 * math.log(random())) * math.cos(2 * math.pi * random())
 
 def cliffsDelta(ns1, ns2):
-    if len(ns1) > 256:
-        ns1 = many(ns1, 256)
-    if len(ns2) > 256:
-        ns2 = many(ns2, 256)
-    if len(ns1) > 10 * len(ns2):
-        ns2 = many(ns1, 10 * len(ns2))
-    if len(ns2) > 10 * len(ns1):
-        ns2 = many(ns2, 10 * len(ns1))
-    n, gt, lt = 0, 0, 0
+    n, gt, lt = 0,0,0
     for x in ns1:
         for y in ns2:
-            n = n + 1
+            n +=  1
             if x > y:
-                gt = gt + 1
-            elif x < y:
-                lt = lt + 1
-    return abs(lt - gt) / n <= const.cliffs
+                gt += 1
+            if x < y:
+                lt += 1
+    return abs(lt - gt)/n > const.cliffs
 
 def delta(i, other):
-    e, y, z = 1E-32, i, other
-    return abs(y.mu - z.mu) / ((e + y.sd ** 2 / y.n + z.sd ** 2 / z.n) ** .5)
+    e, y, z= 1E-32, i, other
+    return abs(y.mu - z.mu) / (math.sqrt(e + y.sd**2/y.n + z.sd**2/z.n))
 
 def bootstrap(y0, z0):
     x, y, z, yhat, zhat = Num(), Num(), Num(), [], []
@@ -59,23 +49,22 @@ def bootstrap(y0, z0):
     return n / const.bootstrap >= const.conf
 
 def RX(t,s):
-    t = sorted(t)
-    return {'name' : s or "", 'rank':0, 'n':len(t), 'show':"", 'has':t}
+    name = s if s else ""
+    has = sorted(t) if t else []
+    return {'name': name, 'rank': 0, 'has': has, 'show':""}
 
 def div(t):
     t= t.get('has', t)
     return (t[ len(t)*9//10 ] - t[ len(t)*1//10 ])/2.56
 
 def mid(t):
-    t= t.get('has', t)
-    n = len(t)//2
-    return (t[n] +t[n+1])/2 if len(t)%2==0 else t[n+1]
+  t = t['has'] if t['has'] else t
+  n = (len(t)-1)//2
+  return (t[n] +t[n+1])/2 if len(t)%2==0 else t[n+1]
 
-def merge(rx1,rx2) :
+def merge(rx1, rx2):
     rx3 = RX([], rx1['name'])
-    for _,t in enumerate([rx1['has'],rx2['has']]):
-        for _,x in enumerate(t): 
-            rx3['has'].append(x)
+    rx3['has'] = rx1['has'] + rx2['has']
     rx3['has'] = sorted(rx3['has'])
     rx3['n'] = len(rx3['has'])
     return rx3
