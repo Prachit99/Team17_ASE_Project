@@ -102,6 +102,7 @@ def main(options,help,funs):
 
         for k,v in top_table.items():
             v['avg'] = stats_mean(v['data'])
+
             stats = [k] + [v['avg'][y] for y in headers]
             stats += [int(v['evals']/const.iter)]
             table.append(stats)

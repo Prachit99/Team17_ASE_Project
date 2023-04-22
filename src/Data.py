@@ -86,6 +86,7 @@ class Data:
             ys = self.Cols.y
         for col in ys:
             for Row1, Row2 in zip(Rows1, Rows2):
+                # print(col.at,col.txt,"Data Line 84")
                 x = col.norm(Row1.cells[col.at])
                 y = col.norm(Row2.cells[col.at])
                 s1 = s1 - (pow(math.e,(col.w*(x-y))/len(ys)))
@@ -170,7 +171,7 @@ class Data:
 
         def v(has):
             return value(has, len(best.Rows), len(rest.Rows), "best")
-        
+
         def score(ranges):
             rule = self.rule(ranges,maxSizes)
             if rule:
@@ -180,7 +181,6 @@ class Data:
                 if len(bestr) + len(restr) > 0: 
                     return v({'best': len(bestr), 'rest':len(restr)}), rule
             return None, None
-
 
         for ranges in bins(self.Cols.x, {'best':best.Rows, 'rest':rest.Rows}):
             maxSizes[ranges[0]['txt']] = len(ranges)
