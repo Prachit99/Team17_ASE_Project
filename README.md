@@ -25,15 +25,10 @@ To check whether you have python installed or not, you can open CMD or a Termina
 
 If this is not the case, then you need to download python installer package from [Python Installers](https://www.python.org/downloads/) based on your system's operating system and install it and you can further clone this repository to execute the scripts.
 
-
-## Contribution Code of Conduct
-
-The rules listed below are to be followed by the ones who will be contributing to the code in the repository:
-
-  - Atleast one review/approval is required from any other contributors of the project to merge a commit to the main branch.
-  - It is recommended to delete the branch as soon as it is merged to the main branch to avoid stale branches in the repository.
-  - It is encouraged to add name tags such as "feature-" or "patch-" in the branches if it is used to add code-patches or features in the project.
-
+## Steps to run
+1. Install Python 3.10.6<br>
+2. Run `pip install -r requirements.txt`<br>
+3. cd into `src/test` folder and run `python testEngine.py -g all`
 
 ## Contributors 
 
