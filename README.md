@@ -4,9 +4,9 @@ This is an project repository for the course ASE (CSC 591)
 <img src="/etc/AUTOMATED%20SOFTWARE%20ENGINEERING.png" width="1000" height="500"/>
 
 <div align="center">
-  
-  [![DOI](https://zenodo.org/badge/589028280.svg)](https://zenodo.org/badge/latestdoi/589028280)
-  
+  <a href="https://zenodo.org/badge/latestdoi/626750616"><img src="https://zenodo.org/badge/626750616.svg" alt="DOI"></a>
+
+
   <a href="https://github.com/Prachit99/lua-decoder"><img src="https://img.shields.io/github/repo-size/Prachit99/lua-decoder?style=for-the-badge"></a>
   <a href="https://github.com/Prachit99/Team17_ASE_Project/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Prachit99/lua-decoder?style=for-the-badge"></a>
   <a href="https://github.com/Prachit99/Team17_ASE_Project/graphs/contributors"><img src="https://img.shields.io/github/contributors/Prachit99/lua-decoder?style=for-the-badge"/></a>
