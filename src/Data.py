@@ -150,7 +150,7 @@ class Data:
         if not Rows:
             Rows = self.Rows
         Row_set = np.array([r.cells for r in Rows])
-        kmeans = MiniBatchKMeans(n_clusters=2, random_state=0, batch_size=100, n_init="auto")
+        kmeans = MiniBatchKMeans(n_clusters=2, random_state=0, batch_size=300, n_init="auto")
         kmeans.fit(Row_set)
         left_cluster = Row(kmeans.cluster_centers_[0])
         right_cluster = Row(kmeans.cluster_centers_[1])
@@ -167,36 +167,30 @@ class Data:
     
     def xpln(self,best,rest):
         tmp, maxSizes = [], {}
+
         def v(has):
             return value(has, len(best.Rows), len(rest.Rows), "best")
+        
         def score(ranges):
             rule = self.rule(ranges,maxSizes)
             if rule:
-                print(self.showRule(rule))
+                # print(self.showRule(rule))
                 bestr= self.selects(rule, best.Rows)
                 restr= self.selects(rule, rest.Rows)
                 if len(bestr) + len(restr) > 0: 
                     return v({'best': len(bestr), 'rest':len(restr)}), rule
             return None, None
-    
-        # def score(self, ranges):
-        #     rule = self.RULE(ranges, self.maxSizes)
-        #     if rule:
-        #         bestr = selects(rule, self.best.Rows)
-        #         restr = selects(rule, self.rest.Rows)
-        #         if len(bestr) + len(restr) > 0:
-        #             return value({'best': len(bestr), 'rest': len(restr)}, len(self.best.Rows), len(self.rest.Rows), 'best'), rule
-        #     return None,None
 
-        for ranges in bins(self.Cols.x,{'best':best.Rows, 'rest':rest.Rows}):
+
+        for ranges in bins(self.Cols.x, {'best':best.Rows, 'rest':rest.Rows}):
             maxSizes[ranges[0]['txt']] = len(ranges)
-            print("")
+            # print("")
             for range in ranges:
-                print(range['txt'], range['lo'], range['hi'])
+                # print(range['txt'], range['lo'], range['hi'])
                 tmp.append({'range':range, 'max':len(ranges),'val': v(range['y'].has)})
 
-        rule,most=self.firstN(sorted(tmp, key=itemgetter('val')),score)
-        return rule,most
+        rule, most = self.firstN(sorted(tmp, key=itemgetter('val')),score)
+        return rule, most
     
     def firstN(self, sorted_ranges, scoreFun):
         first = sorted_ranges[0]['val']
@@ -212,17 +206,21 @@ class Data:
             if tmp is not None and tmp > most:
                 out, most = rule, tmp
         return out, most
+    
     def selects(self, rule, rows):
         def disjunction(ranges, row):
+            if ranges == None:
+                return False
             for range in ranges:
-                lo, hi, at = range['lo'], range['hi'], range['at']
-                x = row.cells[at]
-                if x == "?":
-                    return True
-                if lo == hi and lo == x:
-                    return True
-                if lo <= x and x < hi:
-                    return True
+                if range != None:
+                    lo, hi, at = range['lo'], range['hi'], range['at']
+                    x = row.cells[at]
+                    if x == "?":
+                        return True
+                    if lo == hi and lo == x:
+                        return True
+                    if lo <= x and x < hi:
+                        return True
             return False
 
         def conjunction(row):
@@ -246,7 +244,7 @@ class Data:
             t[range['txt']].append({'lo' : range['lo'],'hi' : range['hi'],'at':range['at']})
         return prune(t, maxSize)
         
-    def showRule(self,rule):
+    def showRule(self, rule):
         def pretty(range):
             return range['lo'] if range['lo']==range['hi'] else [range['lo'], range['hi']]
     
@@ -265,8 +263,13 @@ class Data:
                 j+=1
 
             return t if len(t0)==len(t) else merge(t) 
+        
+
         def merges(attr,ranges):
-            print("Ranges")
-            print(ranges)
-            return list(map(pretty,merge(sorted(ranges,key=itemgetter('lo'))))),attr
+            # print("Ranges")
+            # print(ranges)
+            if ranges == None:
+                return 
+            else:
+                return list(map(pretty,merge(sorted(ranges,key=lambda x: x['lo'])))),attr
         return dkap(rule,merges)

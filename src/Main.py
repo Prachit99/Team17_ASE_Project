@@ -5,7 +5,7 @@ from Stats import *
 import Constants
 from Data import Data 
 from tabulate import tabulate
-from xpln import *
+import time
 
 
 def settings(s):
@@ -54,20 +54,23 @@ def main(options,help,funs):
         count = 0
         while count < const.iter:
             data = Data(const.file)
+            data = preprocessData(const.file, Data)
 
+            s1_start_time = time.time()
             best, rest, evals = data.sway()
-            # xp = XPLN(best, rest)
-            rule,_= data.xpln(best,rest)
+            rule, most = data.xpln(best,rest)
+            s1_end_time = time.time()
 
+            s2_start_time = time.time()
             best2, rest2, evals2 = data.sway('min_batch_kmeans')
-            # xp2 = XPLN(best2, rest2)
-            best_xpln2, rest_xpln2 = data.xpln(best2, rest2)
+            rule_x2, most_x2 = data.xpln(best2, rest2)
+            s2_end_time = time.time()
 
 
             if rule != -1:
                 betters, _ = data.betters(len(best.Rows))
                 top_table['top']['data'].append(Data(data,betters))
-                top_table['xpln']['data'].append(Data(data,selects(rule,data.Rows)))
+                top_table['xpln']['data'].append(Data(data,data.selects(rule,data.Rows)))
                 top_table['all']['data'].append(data)
                 top_table['sway1']['data'].append(best)
                 top_table['sway2']['data'].append(best2)
@@ -98,15 +101,14 @@ def main(options,help,funs):
         top_table['top'] = top_table.pop('top')
 
         for k,v in top_table.items():
-            v['avg'] = stats_average(v['data'])
+            v['avg'] = stats_mean(v['data'])
             stats = [k] + [v['avg'][y] for y in headers]
             stats += [int(v['evals']/const.iter)]
-            print("-----------------")
-            print(type(stats))
             table.append(stats)
         
         print(tabulate(table, headers=headers+["n_evals avg"],numalign="right"))
-        print()
+        print(f'Time for SWAY1: {s1_end_time - s1_start_time}')
+        print(f'Time for SWAY2: {s2_end_time - s2_start_time}')
 
         table=[]
         for [base, diff], result in bottom_table:
@@ -125,6 +127,5 @@ def main(options,help,funs):
                     print("✅ pass:", what)
     
     if passes + fails > 0:
-        print({'pass' : passes, 'fail' : fails, 'success' :100*passes/(passes+fails)//1})
-    # sys.exit(n)
+        print(f'pass: {passes}, fail: {fails}, success: {100*passes/(passes+fails)//1}')
     exit(fails)

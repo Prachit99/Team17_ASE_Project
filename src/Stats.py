@@ -2,6 +2,7 @@ import math, random
 from Num import Num
 from Utils import *
 
+
 def samples(t,n=0):
     u= []
     n = n or len(t)
@@ -9,8 +10,10 @@ def samples(t,n=0):
         u.append(t[random.randrange(len(t))]) 
     return u
 
+
 def gaussian(mu = 0, sd = 1):
     return mu + sd * math.sqrt(-2 * math.log(random())) * math.cos(2 * math.pi * random())
+
 
 def cliffsDelta(ns1, ns2):
     n, gt, lt = 0,0,0
@@ -23,9 +26,14 @@ def cliffsDelta(ns1, ns2):
                 lt += 1
     return abs(lt - gt)/n > const.cliffs
 
+
 def delta(i, other):
     e, y, z= 1E-32, i, other
-    return abs(y.mu - z.mu) / (math.sqrt(e + y.sd**2/y.n + z.sd**2/z.n))
+    try:
+        return abs(y.mu - z.mu) / (math.sqrt(e + y.sd**2/y.n + z.sd**2/z.n))
+    except ZeroDivisionError:
+        return float('inf')
+    
 
 def bootstrap(y0, z0):
     x, y, z, yhat, zhat = Num(), Num(), Num(), [], []
@@ -48,19 +56,23 @@ def bootstrap(y0, z0):
             n += 1
     return n / const.bootstrap >= const.conf
 
+
 def RX(t,s):
     name = s if s else ""
     has = sorted(t) if t else []
     return {'name': name, 'rank': 0, 'has': has, 'show':""}
 
+
 def div(t):
     t= t.get('has', t)
     return (t[ len(t)*9//10 ] - t[ len(t)*1//10 ])/2.56
+
 
 def mid(t):
   t = t['has'] if t['has'] else t
   n = (len(t)-1)//2
   return (t[n] +t[n+1])/2 if len(t)%2==0 else t[n+1]
+
 
 def merge(rx1, rx2):
     rx3 = RX([], rx1['name'])
