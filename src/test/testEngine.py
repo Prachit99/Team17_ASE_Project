@@ -39,7 +39,7 @@ eg("data", "showing data sets", testData)
 # eg("dist", "distance test", testDist)
 # eg("half", "divide data in half", testHalf)
 # eg("tree", "show tree of clusters", testTree)
-# eg("sway", "optimizing", testSway)
+eg("sway", "optimizing", testSway)
 # eg("bins", "find deltas between rest and best", testBins)
 # eg("xpln","explore explanation sets",testXpln)
 
